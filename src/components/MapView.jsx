@@ -6,6 +6,10 @@ const FOCOS_WITH_DIST = FOCOS.map(f => ({
   ...f,
   dist: haversine(f.lat1, f.lon1, f.lat2, f.lon2),
 }))
+const DIST_LIST = FOCOS_WITH_DIST.map(f => f.dist)
+const DIST_AVG = DIST_LIST.reduce((a, b) => a + b, 0) / DIST_LIST.length
+const DIST_MAX = Math.max(...DIST_LIST)
+const DIST_MIN = Math.min(...DIST_LIST)
 
 function makeIcon(id, type, hl = false) {
   const sz = hl ? 28 : 22
@@ -25,7 +29,7 @@ export default function MapView({ selectedId, onSelect, cameraFilter, linesVisib
   const markersIARef = useRef({})
   const linesRef = useRef({})
   const cameraMarkersRef = useRef({})
-  const cameraLinesRef = useRef({})
+  const cameraLinesRef = useRef([])
   const gisRef = useRef({ usos: null, lineas: null, campos: null })
   const prevSelectedRef = useRef(null)
 
@@ -109,8 +113,11 @@ export default function MapView({ selectedId, onSelect, cameraFilter, linesVisib
 
     // Add focos markers
     FOCOS_WITH_DIST.forEach(f => {
-      const mip = L.marker([f.lat1, f.lon1], { icon: makeIcon(f.id, 'ip'), zIndexOffset: 500 }).addTo(map)
-      const mia = L.marker([f.lat2, f.lon2], { icon: makeIcon(f.id, 'ia'), zIndexOffset: 500 }).addTo(map)
+      const isVeryClose = f.dist < 120
+      const ipPos = isVeryClose ? [f.lat1, f.lon1 - 0.00018] : [f.lat1, f.lon1]
+      const iaPos = isVeryClose ? [f.lat2, f.lon2 + 0.00018] : [f.lat2, f.lon2]
+      const mip = L.marker(ipPos, { icon: makeIcon(f.id, 'ip'), zIndexOffset: 600 }).addTo(map)
+      const mia = L.marker(iaPos, { icon: makeIcon(f.id, 'ia'), zIndexOffset: 550 }).addTo(map)
       const ln = L.polyline([[f.lat1, f.lon1], [f.lat2, f.lon2]], {
         color: '#555', weight: 1.5, dashArray: '5,4', opacity: 0.6,
       }).addTo(map)
@@ -137,24 +144,25 @@ export default function MapView({ selectedId, onSelect, cameraFilter, linesVisib
       cameraMarkersRef.current[cam.id] = marker
     })
 
-    // Legend
+    // Map stats legend
     const legend = L.control({ position: 'bottomleft' })
     legend.onAdd = () => {
       const div = L.DomUtil.create('div')
-      div.style.cssText = 'background:white;padding:8px 10px;border-radius:5px;border:1px solid #ccc;font-size:11px;font-family:monospace;line-height:1.9;max-width:170px;'
-      div.innerHTML = '<b style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;">Uso del suelo</b><br>' +
-        Object.entries(USO_COLORS).map(([k, v]) =>
-          `<span style="display:inline-block;width:10px;height:10px;background:${v};border-radius:2px;margin-right:5px;vertical-align:middle;"></span>${k}`
-        ).join('<br>')
+      div.style.cssText = 'background:white;padding:8px 10px;border-radius:5px;border:1px solid #ccc;font-size:11px;font-family:monospace;line-height:1.8;max-width:220px;'
+      div.innerHTML =
+        '<b style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;">Estadística focos (IP-IA)</b><br>' +
+        `Total: <b>${FOCOS_WITH_DIST.length}</b><br>` +
+        `Promedio: <b>${(DIST_AVG / 1000).toFixed(2)} km</b><br>` +
+        `Max: <b>${(DIST_MAX / 1000).toFixed(2)} km</b><br>` +
+        `Min: <b>${(DIST_MIN / 1000).toFixed(2)} km</b><br>` +
+        `<span style="display:inline-block;width:10px;height:2px;background:#1a6fc4;vertical-align:middle;margin-right:5px"></span>Camara → i_Protección<br>` +
+        `<span style="display:inline-block;width:10px;height:2px;background:#d94f2b;vertical-align:middle;margin-right:5px"></span>Camara → Cámara IA`
       return div
     }
     legend.addTo(map)
 
     // Initial fit
-    const allCoords = [
-      ...FOCOS_WITH_DIST.flatMap(f => [[f.lat1, f.lon1], [f.lat2, f.lon2]]),
-      ...CAMARAS.map(c => [c.lat, c.lon]),
-    ]
+    const allCoords = FOCOS_WITH_DIST.flatMap(f => [[f.lat1, f.lon1], [f.lat2, f.lon2]])
     map.fitBounds(L.latLngBounds(allCoords), { padding: [40, 40] })
   }, [getProp, onSelect]) // eslint-disable-line
 
@@ -175,14 +183,11 @@ export default function MapView({ selectedId, onSelect, cameraFilter, linesVisib
       markersIARef.current[selectedId]?.setIcon(makeIcon(selectedId, 'ia', true))
       const f = FOCOS_WITH_DIST.find(x => x.id === selectedId)
       if (f) {
-        const boundsCoords = [[f.lat1, f.lon1], [f.lat2, f.lon2], ...getVisibleCamaras().map(c => [c.lat, c.lon])]
+        const boundsCoords = [[f.lat1, f.lon1], [f.lat2, f.lon2]]
         map.fitBounds(L.latLngBounds(boundsCoords), { padding: [100, 100] })
       }
     } else {
-      const allCoords = [
-        ...FOCOS_WITH_DIST.flatMap(f => [[f.lat1, f.lon1], [f.lat2, f.lon2]]),
-        ...CAMARAS.map(c => [c.lat, c.lon]),
-      ]
+      const allCoords = FOCOS_WITH_DIST.flatMap(f => [[f.lat1, f.lon1], [f.lat2, f.lon2]])
       map.fitBounds(L.latLngBounds(allCoords), { padding: [40, 40] })
     }
 
@@ -214,21 +219,29 @@ export default function MapView({ selectedId, onSelect, cameraFilter, linesVisib
     const map = mapRef.current
     if (!map) return
 
-    Object.values(cameraLinesRef.current).forEach(line => map.removeLayer(line))
-    cameraLinesRef.current = {}
+    cameraLinesRef.current.forEach(line => map.removeLayer(line))
+    cameraLinesRef.current = []
 
     if (!selectedId) return
     const foco = FOCOS_WITH_DIST.find(f => f.id === selectedId)
     if (!foco) return
 
     getVisibleCamaras().forEach(cam => {
-      const line = L.polyline([[cam.lat, cam.lon], [foco.lat2, foco.lon2]], {
-        color: '#d1002f',
+      const lineToIP = L.polyline([[cam.lat, cam.lon], [foco.lat1, foco.lon1]], {
+        color: '#1a6fc4',
         weight: 2.5,
         opacity: 0.95,
       }).addTo(map)
-      line.bindTooltip(`${cam.nombre} → Foco #${foco.id}`, { sticky: true, opacity: 0.95 })
-      cameraLinesRef.current[cam.id] = line
+      lineToIP.bindTooltip(`${cam.nombre} → i_Protección #${foco.id}`, { sticky: true, opacity: 0.95 })
+
+      const lineToIA = L.polyline([[cam.lat, cam.lon], [foco.lat2, foco.lon2]], {
+        color: '#d94f2b',
+        weight: 2.5,
+        opacity: 0.95,
+      }).addTo(map)
+      lineToIA.bindTooltip(`${cam.nombre} → Cámara IA #${foco.id}`, { sticky: true, opacity: 0.95 })
+
+      cameraLinesRef.current.push(lineToIP, lineToIA)
     })
   }, [selectedId, getVisibleCamaras])
 
