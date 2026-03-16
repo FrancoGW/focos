@@ -13,6 +13,14 @@ export default function StatsBar() {
   const st = { display:'flex', gap:5, alignItems:'baseline' }
   const sv = { fontSize:13, fontWeight:500 }
   const sk = { color:'#aaa9a2' }
+  const legendItem = { display: 'flex', alignItems: 'center', gap: 6 }
+  const dot = (color) => ({
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
+    background: color,
+    display: 'inline-block',
+  })
 
   return (
     <div style={{
@@ -29,6 +37,12 @@ export default function StatsBar() {
       <div style={st}><span style={{...sv, color:'#9FE1CB'}}>{fmtDist(min)}</span><span style={sk}>mín #{minF.id}</span></div>
       <div style={st}><span style={{...sv, color:'#9FE1CB'}}>{close}</span><span style={sk}>coincidencias &lt;2km</span></div>
       <div style={st}><span style={sv}>8.000 ha</span><span style={sk}>San José · Santa Rosa</span></div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
+        <span style={{ ...sk, color: '#d6d4cc' }}>Leyenda estadística entre puntos:</span>
+        <span style={legendItem}><span style={dot('#9FE1CB')} /><span>Min</span></span>
+        <span style={legendItem}><span style={dot('#F0997B')} /><span>Max</span></span>
+        <span style={legendItem}><span style={dot('#9FE1CB')} /><span>Promedio</span></span>
+      </div>
     </div>
   )
 }

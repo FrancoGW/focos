@@ -61,7 +61,16 @@ const FOCOS_WITH_DIST = FOCOS.map(f => ({
   dist: haversine(f.lat1, f.lon1, f.lat2, f.lon2),
 }))
 
-export default function Sidebar({ selectedId, onSelect, linesVisible, onToggleLines, layers, onToggleLayer }) {
+export default function Sidebar({
+  selectedId,
+  onSelect,
+  cameraFilter,
+  onChangeCameraFilter,
+  linesVisible,
+  onToggleLines,
+  layers,
+  onToggleLayer,
+}) {
   return (
     <div style={s.sidebar}>
 
@@ -79,6 +88,16 @@ export default function Sidebar({ selectedId, onSelect, linesVisible, onToggleLi
               #{f.id} — {f.fecha} ({fmtDist(f.dist)})
             </option>
           ))}
+        </select>
+        <label style={{ ...s.label, marginTop: 8 }}>Camara de vigilancia</label>
+        <select
+          style={s.select}
+          value={cameraFilter}
+          onChange={e => onChangeCameraFilter(e.target.value)}
+        >
+          <option value="all">— Ambas camaras —</option>
+          <option value="cam-1">Camara 1</option>
+          <option value="cam-2">Camara 2</option>
         </select>
         <div style={s.btnRow}>
           <button style={s.btn} onClick={() => onSelect(null)}>Ver todos</button>

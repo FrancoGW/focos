@@ -27,6 +27,23 @@ export const FOCOS = [
   { id:26, fecha:"2026-03-11", hIP:"07:57", hIA:"07:28", lat1:-28.391990, lon1:-57.911242, lat2:-28.35201, lon2:-57.86174 },
 ]
 
+export const CAMARAS = [
+  {
+    id: 'cam-1',
+    nombre: 'Camara vigilancia 1',
+    lat: -28.516661,
+    lon: -58.061036,
+    etiqueta: "28°30'59.98\"S 58°3'39.73\"O",
+  },
+  {
+    id: 'cam-2',
+    nombre: 'Camara vigilancia 2',
+    lat: -28.481783,
+    lon: -57.947533,
+    etiqueta: "28°28.907'S 57°56.852'W",
+  },
+]
+
 export function haversine(la1, lo1, la2, lo2) {
   const R = 6371000, r = x => x * Math.PI / 180
   const dLa = r(la2 - la1), dLo = r(lo2 - lo1)

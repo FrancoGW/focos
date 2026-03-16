@@ -8,6 +8,7 @@ import StatsBar from './components/StatsBar'
 export default function App() {
   const [selectedId, setSelectedId] = useState(null)
   const [linesVisible, setLinesVisible] = useState(true)
+  const [cameraFilter, setCameraFilter] = useState('all')
   const [layers, setLayers] = useState({ usos: true, lineas: true, campos: true })
 
   const handleToggleLayer = useCallback((name) => {
@@ -21,6 +22,8 @@ export default function App() {
         <Sidebar
           selectedId={selectedId}
           onSelect={setSelectedId}
+          cameraFilter={cameraFilter}
+          onChangeCameraFilter={setCameraFilter}
           linesVisible={linesVisible}
           onToggleLines={() => setLinesVisible(v => !v)}
           layers={layers}
@@ -29,6 +32,7 @@ export default function App() {
         <MapView
           selectedId={selectedId}
           onSelect={setSelectedId}
+          cameraFilter={cameraFilter}
           linesVisible={linesVisible}
           layers={layers}
         />
