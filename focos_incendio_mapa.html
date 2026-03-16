@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Focos de Incendio — Comparación i_Protección vs Cámara IA</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --ip: #1a6fc4;
+    --ip-dark: #0d4a8a;
+    --ia: #d94f2b;
+    --ia-dark: #9c3318;
+    --bg: #f5f3ee;
+    --panel: #ffffff;
+    --border: #ddd9d0;
+    --text: #1a1916;
+    --muted: #7a776e;
+    --accent: #2d5a27;
+    --good: #2d7a3a;
+    --warn: #c47d0a;
+    --bad: #c42020;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--text);
+    color: #f5f3ee;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    border-bottom: 3px solid var(--ia);
+  }
+  header h1 {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  header .subtitle {
+    font-size: 11px;
+    color: #aaa9a2;
+    font-family: 'DM Mono', monospace;
+    margin-top: 2px;
+  }
+  .header-badges {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    padding: 4px 10px;
+    border-radius: 3px;
+  }
+  .badge-ip { background: var(--ip); color: white; }
+  .badge-ia { background: var(--ia); color: white; }
+  .badge-dot { width: 8px; height: 8px; border-radius: 50%; background: white; }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-section {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .sidebar-section label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  select {
+    width: 100%;
+    padding: 7px 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+  }
+  select:focus { outline: 2px solid var(--ip); border-color: var(--ip); }
+
+  .btn-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  button {
+    flex: 1;
+    padding: 7px 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    transition: all 0.15s;
+  }
+  button:hover { background: var(--text); color: var(--bg); }
+  button.active { background: var(--text); color: var(--bg); }
+
+  /* FOCO LIST */
+  .foco-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+  .foco-list::-webkit-scrollbar { width: 4px; }
+  .foco-list::-webkit-scrollbar-track { background: var(--bg); }
+  .foco-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .foco-item {
+    padding: 9px 14px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .foco-item:hover { background: var(--bg); border-left-color: var(--muted); }
+  .foco-item.selected { background: #eef4fb; border-left-color: var(--ip); }
+
+  .foco-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: white;
+    background: var(--text);
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .foco-info { flex: 1; min-width: 0; }
+  .foco-fecha {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .foco-dist {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .dist-low { color: var(--good); }
+  .dist-mid { color: var(--warn); }
+  .dist-high { color: var(--bad); }
+
+  /* MAP */
+  #map {
+    flex: 1;
+    position: relative;
+  }
+
+  /* COMPARISON PANEL */
+  .compare-panel {
+    width: 320px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .compare-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--text);
+    color: var(--bg);
+    flex-shrink: 0;
+  }
+  .compare-header h2 {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .compare-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+  }
+  .compare-content::-webkit-scrollbar { width: 4px; }
+  .compare-content::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .compare-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+    gap: 8px;
+  }
+  .compare-empty-icon {
+    font-size: 32px;
+    opacity: 0.3;
+  }
+
+  .compare-id {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .compare-fecha {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .sys-block {
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .sys-block-ip { background: #e8f0fb; border: 1px solid #b8d0f0; }
+  .sys-block-ia { background: #faeae6; border: 1px solid #f0c0b0; }
+
+  .sys-title {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .sys-title-ip { color: var(--ip-dark); }
+  .sys-title-ia { color: var(--ia-dark); }
+
+  .sys-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  .sys-row .k { color: var(--muted); }
+  .sys-row .v {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    font-size: 11px;
+  }
+
+  .dist-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px;
+    margin: 12px 0;
+    text-align: center;
+  }
+  .dist-label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .dist-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 28px;
+    font-weight: 500;
+  }
+  .dist-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .diff-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+  }
+  .diff-title {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+  .diff-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 7px;
+  }
+  .diff-row .k { color: var(--muted); }
+  .diff-bar-wrap { flex: 1; margin: 0 10px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .diff-bar { height: 100%; border-radius: 2px; }
+  .diff-row .v { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; min-width: 50px; text-align: right; }
+
+  /* STATS BAR */
+  .stats-bar {
+    background: var(--text);
+    color: var(--bg);
+    padding: 7px 20px;
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-shrink: 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+  }
+  .stat-item { display: flex; gap: 6px; align-items: baseline; }
+  .stat-item .sv { font-size: 14px; font-weight: 500; }
+  .stat-item .sk { color: #aaa9a2; }
+
+  /* LEAFLET CUSTOM MARKERS */
+  .lf-num-ip, .lf-num-ia {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    color: white;
+    border: 2px solid rgba(0,0,0,0.25);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .lf-num-ip { background: var(--ip); border-color: var(--ip-dark); }
+  .lf-num-ia { background: var(--ia); border-color: var(--ia-dark); }
+  .lf-num-ip.hl, .lf-num-ia.hl { width: 32px; height: 32px; font-size: 12px; box-shadow: 0 0 0 3px rgba(255,255,255,0.8), 0 2px 8px rgba(0,0,0,0.4); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Sistema de Detección de Focos de Incendio</h1>
+    <div class="subtitle">Corrientes, Argentina — Feb/Mar 2026 — 26 focos registrados</div>
+  </div>
+  <div class="header-badges">
+    <div class="badge badge-ip"><div class="badge-dot"></div> i_Protección</div>
+    <div class="badge badge-ia"><div class="badge-dot"></div> Cámara IA</div>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- SIDEBAR: lista de focos -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <label>Filtrar foco</label>
+      <select id="sel">
+        <option value="all">— Todos los focos —</option>
+      </select>
+      <div class="btn-row">
+        <button onclick="mostrarTodos()" id="btn-todos">Ver todos</button>
+        <button onclick="toggleLineas()" id="btn-lineas">Ocultar líneas</button>
+      </div>
+    </div>
+    <div class="foco-list" id="foco-list"></div>
+  </div>
+
+  <!-- MAPA -->
+  <div id="map"></div>
+
+  <!-- PANEL COMPARACIÓN -->
+  <div class="compare-panel">
+    <div class="compare-header">
+      <h2>Comparación de sistemas</h2>
+    </div>
+    <div class="compare-content" id="compare-content">
+      <div class="compare-empty">
+        <div class="compare-empty-icon">⊕</div>
+        <div>Seleccioná un foco<br>en el mapa o en la lista</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar" id="stats-bar"></div>
+
+<script>
+const focos = [
+  {id:1,fecha:"2026-02-13",hIP:"08:30",hIA:"08:30",lat1:-28.391995,lon1:-57.911232,lat2:-28.39770,lon2:-57.89913},
+  {id:2,fecha:"2026-02-15",hIP:"18:50",hIA:"18:57",lat1:-28.369742,lon1:-57.869705,lat2:-28.42738,lon2:-57.91649},
+  {id:3,fecha:"2026-02-15",hIP:"19:03",hIA:"19:03",lat1:-28.376051,lon1:-57.896187,lat2:-28.39089,lon2:-57.94089},
+  {id:4,fecha:"2026-02-16",hIP:"09:30",hIA:"09:32",lat1:-28.339737,lon1:-57.735642,lat2:-28.42469,lon2:-57.82776},
+  {id:5,fecha:"2026-02-18",hIP:"13:22",hIA:"13:23",lat1:-28.402835,lon1:-58.019126,lat2:-28.41501,lon2:-58.00887},
+  {id:6,fecha:"2026-02-18",hIP:"16:15",hIA:"16:11",lat1:-28.670391,lon1:-57.821355,lat2:-28.67565,lon2:-57.8655},
+  {id:7,fecha:"2026-02-18",hIP:"18:56",hIA:"18:52",lat1:-28.682000,lon1:-57.812476,lat2:-28.59143,lon2:-57.90148},
+  {id:8,fecha:"2026-02-23",hIP:"16:30",hIA:"16:36",lat1:-28.342520,lon1:-57.724732,lat2:-28.42365,lon2:-57.83049},
+  {id:9,fecha:"2026-02-26",hIP:"12:41",hIA:"12:42",lat1:-28.345091,lon1:-58.143413,lat2:-28.29631,lon2:-58.14333},
+  {id:10,fecha:"2026-02-27",hIP:"17:29",hIA:"17:26",lat1:-28.414187,lon1:-58.021046,lat2:-28.34895,lon2:-58.04967},
+  {id:11,fecha:"2026-02-28",hIP:"10:29",hIA:"10:34",lat1:-28.469734,lon1:-57.569635,lat2:-28.48887,lon2:-57.87367},
+  {id:12,fecha:"2026-02-28",hIP:"15:26",hIA:"15:26",lat1:-28.441925,lon1:-58.023309,lat2:-28.37977,lon2:-58.07398},
+  {id:13,fecha:"2026-02-28",hIP:"15:36",hIA:"15:37",lat1:-28.378999,lon1:-58.022147,lat2:-28.31814,lon2:-57.99089},
+  {id:14,fecha:"2026-02-28",hIP:"16:54",hIA:"17:41",lat1:-28.470141,lon1:-58.393891,lat2:-28.44559,lon2:-58.156442},
+  {id:15,fecha:"2026-02-28",hIP:"18:09",hIA:"18:12",lat1:-28.350279,lon1:-57.685260,lat2:-28.43285,lon2:-57.83048},
+  {id:16,fecha:"2026-03-01",hIP:"10:39",hIA:"10:41",lat1:-28.424243,lon1:-58.032956,lat2:-28.44592,lon2:-57.97902},
+  {id:17,fecha:"2026-03-01",hIP:"17:40",hIA:"17:35",lat1:-28.444832,lon1:-58.021095,lat2:-28.37596,lon2:-58.08131},
+  {id:18,fecha:"2026-03-01",hIP:"17:29",hIA:"17:37",lat1:-28.413817,lon1:-57.841992,lat2:-28.42447,lon2:-57.82745},
+  {id:19,fecha:"2026-03-05",hIP:"10:03",hIA:"10:02",lat1:-28.384128,lon1:-58.031837,lat2:-28.44025,lon2:-57.9871},
+  {id:20,fecha:"2026-03-05",hIP:"15:48",hIA:"15:32",lat1:-28.351784,lon1:-58.107521,lat2:-28.34516,lon2:-58.05159},
+  {id:21,fecha:"2026-03-09",hIP:"11:05",hIA:"10:50",lat1:-28.412731,lon1:-58.018168,lat2:-28.42206,lon2:-57.99122},
+  {id:22,fecha:"2026-03-10",hIP:"09:56",hIA:"09:58",lat1:-28.415855,lon1:-58.021696,lat2:-28.47272,lon2:-57.96548},
+  {id:23,fecha:"2026-03-10",hIP:"11:34",hIA:"12:32",lat1:-28.406354,lon1:-58.032166,lat2:-28.43611,lon2:-57.98704},
+  {id:24,fecha:"2026-03-10",hIP:"15:20",hIA:"15:28",lat1:-28.370312,lon1:-58.121288,lat2:-28.35600,lon2:-57.96242},
+  {id:25,fecha:"2026-03-10",hIP:"16:36",hIA:"16:38",lat1:-28.447498,lon1:-57.819872,lat2:-28.34455,lon2:-57.70461},
+  {id:26,fecha:"2026-03-11",hIP:"07:57",hIA:"07:28",lat1:-28.391990,lon1:-57.911242,lat2:-28.35201,lon2:-57.86174}
+];
+
+function haversine(la1,lo1,la2,lo2){
+  const R=6371000,r=x=>x*Math.PI/180,dLa=r(la2-la1),dLo=r(lo2-lo1);
+  const a=Math.sin(dLa/2)**2+Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dLo/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+focos.forEach(f=>{
+  f.dist=haversine(f.lat1,f.lon1,f.lat2,f.lon2);
+  f.dLat=Math.abs(f.lat2-f.lat1);
+  f.dLon=Math.abs(f.lon2-f.lon1);
+  f.dHora=Math.abs(parseInt(f.hIP.replace(':',''))-parseInt(f.hIA.replace(':','')));
+});
+
+function fmtDist(d){ return d>=1000?(d/1000).toFixed(2)+' km':(Math.round(d))+' m'; }
+function distClass(d){ return d<2000?'dist-low':d<8000?'dist-mid':'dist-high'; }
+function distColor(d){ return d<2000?'#2d7a3a':d<8000?'#c47d0a':'#c42020'; }
+
+// MAP
+const map = L.map('map').setView([-28.45, -57.95], 10);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© OpenStreetMap', maxZoom:18
+}).addTo(map);
+
+let markersIP={}, markersIA={}, lineas={}, linesVisible=true;
+let selectedId=null;
+
+function makeIcon(id, type, hl=false){
+  return L.divIcon({
+    className:'',
+    html:`<div class="lf-num-${type}${hl?' hl':''}">${id}</div>`,
+    iconSize: hl?[32,32]:[26,26],
+    iconAnchor: hl?[16,16]:[13,13]
+  });
+}
+
+function buildAll(){
+  focos.forEach(f=>{
+    const mip=L.marker([f.lat1,f.lon1],{icon:makeIcon(f.id,'ip')}).addTo(map);
+    const mia=L.marker([f.lat2,f.lon2],{icon:makeIcon(f.id,'ia')}).addTo(map);
+    const ln=L.polyline([[f.lat1,f.lon1],[f.lat2,f.lon2]],{
+      color:'#888',weight:1.5,dashArray:'6,5',opacity:0.65
+    }).addTo(map);
+    mip.on('click',()=>selectFoco(f.id));
+    mia.on('click',()=>selectFoco(f.id));
+    ln.on('click',()=>selectFoco(f.id));
+    markersIP[f.id]=mip; markersIA[f.id]=mia; lineas[f.id]=ln;
+  });
+}
+
+function selectFoco(id){
+  if(selectedId){
+    markersIP[selectedId].setIcon(makeIcon(selectedId,'ip',false));
+    markersIA[selectedId].setIcon(makeIcon(selectedId,'ia',false));
+  }
+  selectedId=id;
+  markersIP[id].setIcon(makeIcon(id,'ip',true));
+  markersIA[id].setIcon(makeIcon(id,'ia',true));
+
+  // zoom to pair
+  const f=focos.find(x=>x.id===id);
+  const bounds=L.latLngBounds([[f.lat1,f.lon1],[f.lat2,f.lon2]]);
+  map.fitBounds(bounds,{padding:[80,80]});
+
+  // highlight list
+  document.querySelectorAll('.foco-item').forEach(el=>{
+    el.classList.toggle('selected', parseInt(el.dataset.id)===id);
+  });
+
+  // update compare panel
+  updateCompare(f);
+}
+
+function updateCompare(f){
+  const d=f.dist;
+  const dColor=distColor(d);
+  const maxDist=Math.max(...focos.map(x=>x.dist));
+  const pct=(d/maxDist*100).toFixed(1);
+
+  // lat/lon diffs in meters approx
+  const dLatM=f.dLat*111320;
+  const dLonM=f.dLon*111320*Math.cos(f.lat1*Math.PI/180);
+
+  document.getElementById('compare-content').innerHTML=`
+    <div class="compare-id">Foco #${f.id}</div>
+    <div class="compare-fecha">${f.fecha}</div>
+
+    <div class="sys-block sys-block-ip">
+      <div class="sys-title sys-title-ip">i_Protección</div>
+      <div class="sys-row"><span class="k">Latitud</span><span class="v">${f.lat1.toFixed(6)}</span></div>
+      <div class="sys-row"><span class="k">Longitud</span><span class="v">${f.lon1.toFixed(6)}</span></div>
+      <div class="sys-row"><span class="k">Hora detección</span><span class="v">${f.hIP}</span></div>
+    </div>
+
+    <div class="sys-block sys-block-ia">
+      <div class="sys-title sys-title-ia">Cámara IA</div>
+      <div class="sys-row"><span class="k">Latitud</span><span class="v">${f.lat2.toFixed(6)}</span></div>
+      <div class="sys-row"><span class="k">Longitud</span><span class="v">${f.lon2.toFixed(6)}</span></div>
+      <div class="sys-row"><span class="k">Hora detección</span><span class="v">${f.hIA}</span></div>
+    </div>
+
+    <div class="dist-block">
+      <div class="dist-label">Distancia entre sistemas</div>
+      <div class="dist-value" style="color:${dColor}">${fmtDist(d)}</div>
+      <div class="dist-sub">${pct}% del máximo registrado</div>
+    </div>
+
+    <div class="diff-block">
+      <div class="diff-title">Desglose de diferencias</div>
+      <div class="diff-row">
+        <span class="k">ΔLat</span>
+        <div class="diff-bar-wrap"><div class="diff-bar" style="width:${Math.min(dLatM/maxDist*100,100).toFixed(0)}%;background:${dColor}"></div></div>
+        <span class="v">${dLatM>=1000?(dLatM/1000).toFixed(2)+' km':Math.round(dLatM)+' m'}</span>
+      </div>
+      <div class="diff-row">
+        <span class="k">ΔLon</span>
+        <div class="diff-bar-wrap"><div class="diff-bar" style="width:${Math.min(dLonM/maxDist*100,100).toFixed(0)}%;background:${dColor}"></div></div>
+        <span class="v">${dLonM>=1000?(dLonM/1000).toFixed(2)+' km':Math.round(dLonM)+' m'}</span>
+      </div>
+      <div class="diff-row">
+        <span class="k">ΔHora</span>
+        <div class="diff-bar-wrap"><div class="diff-bar" style="width:${Math.min(f.dHora/100*50,100).toFixed(0)}%;background:#5F5E5A"></div></div>
+        <span class="v">${f.dHora} min</span>
+      </div>
+    </div>
+  `;
+}
+
+// BUILD LIST
+function buildList(){
+  const list=document.getElementById('foco-list');
+  list.innerHTML='';
+  focos.forEach(f=>{
+    const div=document.createElement('div');
+    div.className='foco-item';
+    div.dataset.id=f.id;
+    div.innerHTML=`
+      <div class="foco-num">${f.id}</div>
+      <div class="foco-info">
+        <div class="foco-fecha">${f.fecha}</div>
+        <div class="foco-dist ${distClass(f.dist)}">${fmtDist(f.dist)}</div>
+      </div>
+    `;
+    div.addEventListener('click',()=>selectFoco(f.id));
+    list.appendChild(div);
+  });
+}
+
+// STATS BAR
+function buildStats(){
+  const dists=focos.map(f=>f.dist);
+  const avg=dists.reduce((a,b)=>a+b,0)/dists.length;
+  const max=Math.max(...dists);
+  const min=Math.min(...dists);
+  const mxF=focos[dists.indexOf(max)];
+  const mnF=focos[dists.indexOf(min)];
+  const close=focos.filter(f=>f.dist<2000).length;
+  document.getElementById('stats-bar').innerHTML=`
+    <div class="stat-item"><span class="sv">${focos.length}</span><span class="sk">focos totales</span></div>
+    <div class="stat-item"><span class="sv" style="color:#9FE1CB">${fmtDist(avg)}</span><span class="sk">distancia prom.</span></div>
+    <div class="stat-item"><span class="sv" style="color:#F0997B">${fmtDist(max)}</span><span class="sk">máx (foco #${mxF.id})</span></div>
+    <div class="stat-item"><span class="sv" style="color:#9FE1CB">${fmtDist(min)}</span><span class="sk">mín (foco #${mnF.id})</span></div>
+    <div class="stat-item"><span class="sv" style="color:#9FE1CB">${close}</span><span class="sk">coincidencias &lt;2km</span></div>
+  `;
+}
+
+// SELECT FILTER
+function buildSelect(){
+  const sel=document.getElementById('sel');
+  focos.forEach(f=>{
+    const o=document.createElement('option');
+    o.value=f.id;
+    o.textContent=`#${f.id} — ${f.fecha} (${fmtDist(f.dist)})`;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change',()=>{
+    const v=sel.value;
+    if(v==='all') mostrarTodos();
+    else selectFoco(parseInt(v));
+  });
+}
+
+function mostrarTodos(){
+  document.getElementById('sel').value='all';
+  if(selectedId){
+    markersIP[selectedId].setIcon(makeIcon(selectedId,'ip',false));
+    markersIA[selectedId].setIcon(makeIcon(selectedId,'ia',false));
+    selectedId=null;
+  }
+  document.querySelectorAll('.foco-item').forEach(el=>el.classList.remove('selected'));
+  const bounds=L.latLngBounds(focos.flatMap(f=>[[f.lat1,f.lon1],[f.lat2,f.lon2]]));
+  map.fitBounds(bounds,{padding:[40,40]});
+  document.getElementById('compare-content').innerHTML=`<div class="compare-empty"><div class="compare-empty-icon">⊕</div><div>Seleccioná un foco<br>en el mapa o en la lista</div></div>`;
+}
+
+function toggleLineas(){
+  linesVisible=!linesVisible;
+  const btn=document.getElementById('btn-lineas');
+  btn.textContent=linesVisible?'Ocultar líneas':'Mostrar líneas';
+  btn.classList.toggle('active',!linesVisible);
+  Object.values(lineas).forEach(l=>linesVisible?l.addTo(map):map.removeLayer(l));
+}
+
+buildAll();
+buildList();
+buildStats();
+buildSelect();
+
+// initial fit
+const bounds=L.latLngBounds(focos.flatMap(f=>[[f.lat1,f.lon1],[f.lat2,f.lon2]]));
+map.fitBounds(bounds,{padding:[40,40]});
+</script>
+</body>
+</html>
