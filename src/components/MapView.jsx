@@ -155,7 +155,7 @@ export default function MapView({ selectedId, onSelect, cameraFilter, linesVisib
         `Promedio: <b>${(DIST_AVG / 1000).toFixed(2)} km</b><br>` +
         `Max: <b>${(DIST_MAX / 1000).toFixed(2)} km</b><br>` +
         `Min: <b>${(DIST_MIN / 1000).toFixed(2)} km</b><br>` +
-        `<span style="display:inline-block;width:10px;height:2px;background:#1a6fc4;vertical-align:middle;margin-right:5px"></span>Camara comun → i_Protección<br>` +
+        `<span style="display:inline-block;width:10px;height:2px;background:#1a6fc4;vertical-align:middle;margin-right:5px"></span>Torre 3 → i_Protección<br>` +
         `<span style="display:inline-block;width:10px;height:2px;background:#d94f2b;vertical-align:middle;margin-right:5px"></span>Camara IA → punto IA`
       return div
     }
