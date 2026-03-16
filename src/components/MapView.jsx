@@ -155,8 +155,8 @@ export default function MapView({ selectedId, onSelect, cameraFilter, linesVisib
         `Promedio: <b>${(DIST_AVG / 1000).toFixed(2)} km</b><br>` +
         `Max: <b>${(DIST_MAX / 1000).toFixed(2)} km</b><br>` +
         `Min: <b>${(DIST_MIN / 1000).toFixed(2)} km</b><br>` +
-        `<span style="display:inline-block;width:10px;height:2px;background:#1a6fc4;vertical-align:middle;margin-right:5px"></span>Camara → i_Protección<br>` +
-        `<span style="display:inline-block;width:10px;height:2px;background:#d94f2b;vertical-align:middle;margin-right:5px"></span>Camara → Cámara IA`
+        `<span style="display:inline-block;width:10px;height:2px;background:#1a6fc4;vertical-align:middle;margin-right:5px"></span>Camara comun → i_Protección<br>` +
+        `<span style="display:inline-block;width:10px;height:2px;background:#d94f2b;vertical-align:middle;margin-right:5px"></span>Camara IA → punto IA`
       return div
     }
     legend.addTo(map)
@@ -227,21 +227,25 @@ export default function MapView({ selectedId, onSelect, cameraFilter, linesVisib
     if (!foco) return
 
     getVisibleCamaras().forEach(cam => {
-      const lineToIP = L.polyline([[cam.lat, cam.lon], [foco.lat1, foco.lon1]], {
-        color: '#1a6fc4',
-        weight: 2.5,
-        opacity: 0.95,
-      }).addTo(map)
-      lineToIP.bindTooltip(`${cam.nombre} → i_Protección #${foco.id}`, { sticky: true, opacity: 0.95 })
+      if (cam.sistema === 'ip') {
+        const lineToIP = L.polyline([[cam.lat, cam.lon], [foco.lat1, foco.lon1]], {
+          color: '#1a6fc4',
+          weight: 2.5,
+          opacity: 0.95,
+        }).addTo(map)
+        lineToIP.bindTooltip(`${cam.nombre} → i_Protección #${foco.id}`, { sticky: true, opacity: 0.95 })
+        cameraLinesRef.current.push(lineToIP)
+      }
 
-      const lineToIA = L.polyline([[cam.lat, cam.lon], [foco.lat2, foco.lon2]], {
-        color: '#d94f2b',
-        weight: 2.5,
-        opacity: 0.95,
-      }).addTo(map)
-      lineToIA.bindTooltip(`${cam.nombre} → Cámara IA #${foco.id}`, { sticky: true, opacity: 0.95 })
-
-      cameraLinesRef.current.push(lineToIP, lineToIA)
+      if (cam.sistema === 'ia') {
+        const lineToIA = L.polyline([[cam.lat, cam.lon], [foco.lat2, foco.lon2]], {
+          color: '#d94f2b',
+          weight: 2.5,
+          opacity: 0.95,
+        }).addTo(map)
+        lineToIA.bindTooltip(`${cam.nombre} → Cámara IA #${foco.id}`, { sticky: true, opacity: 0.95 })
+        cameraLinesRef.current.push(lineToIA)
+      }
     })
   }, [selectedId, getVisibleCamaras])
 

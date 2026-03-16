@@ -96,8 +96,8 @@ export default function Sidebar({
           onChange={e => onChangeCameraFilter(e.target.value)}
         >
           <option value="all">— Ambas camaras —</option>
-          <option value="cam-1">Camara 1</option>
-          <option value="cam-2">Camara 2</option>
+          <option value="cam-1">Camara comun (i_Protección)</option>
+          <option value="cam-2">Camara IA</option>
         </select>
         <div style={s.btnRow}>
           <button style={s.btn} onClick={() => onSelect(null)}>Ver todos</button>

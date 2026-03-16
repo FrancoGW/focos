@@ -30,14 +30,16 @@ export const FOCOS = [
 export const CAMARAS = [
   {
     id: 'cam-1',
-    nombre: 'Camara vigilancia 1',
+    nombre: 'Camara comun',
+    sistema: 'ip',
     lat: -28.516661,
     lon: -58.061036,
     etiqueta: "28°30'59.98\"S 58°3'39.73\"O",
   },
   {
     id: 'cam-2',
-    nombre: 'Camara vigilancia 2',
+    nombre: 'Camara IA',
+    sistema: 'ia',
     lat: -28.481783,
     lon: -57.947533,
     etiqueta: "28°28.907'S 57°56.852'W",
