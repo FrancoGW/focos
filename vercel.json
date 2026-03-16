@@ -1,5 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/", "destination": "/focos_incendio_mapa.html" }
-  ]
-}
