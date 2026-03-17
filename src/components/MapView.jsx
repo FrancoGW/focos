@@ -108,6 +108,22 @@ export default function MapView({ selectedId, onSelect, cameraFilter, linesVisib
           opacity: 0.9,
           dashArray: '8,4',
         },
+        onEachFeature: (f, layer) => {
+          const nombreCampo = (getProp(f.properties, 'campo', 'CAMPO') || 'Campo').toString().toUpperCase()
+          const center = layer.getBounds?.().getCenter?.()
+          if (center) {
+            const label = L.marker(center, {
+              interactive: false,
+              zIndexOffset: 200,
+              icon: L.divIcon({
+                className: '',
+                html: `<div style="display:inline-block;background:#ffffff;opacity:1;border:2px solid #5f5b50;border-radius:4px;padding:4px 10px;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:#0f0f0f;letter-spacing:0.06em;line-height:1;box-shadow:0 0 0 2px #ffffff, 0 2px 6px rgba(0,0,0,0.28);white-space:nowrap;">${nombreCampo}</div>`,
+              }),
+            })
+            layer.on('add', () => label.addTo(map))
+            layer.on('remove', () => map.removeLayer(label))
+          }
+        },
       }).addTo(map)
     })
 
@@ -133,11 +149,13 @@ export default function MapView({ selectedId, onSelect, cameraFilter, linesVisib
 
     CAMARAS.forEach((cam, idx) => {
       const marker = L.circleMarker([cam.lat, cam.lon], {
-        radius: 7,
-        color: '#8a0022',
-        weight: 2,
-        fillColor: '#d61b4b',
-        fillOpacity: 0.85,
+        pane: 'markerPane',
+        radius: 9,
+        color: '#1f1f1f',
+        weight: 3,
+        opacity: 1,
+        fillColor: '#4d4d4d',
+        fillOpacity: 1,
       }).addTo(map)
       marker.bindTooltip(`<b>${cam.nombre}</b><br>${cam.etiqueta}`, { sticky: true, opacity: 0.95 })
       marker.bindPopup(`<b>${cam.nombre}</b><br>Posición ${idx + 1}`)
